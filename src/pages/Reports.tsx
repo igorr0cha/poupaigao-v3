@@ -1,37 +1,92 @@
 
 import React, { useState } from 'react';
-import { useFinancialData } from '@/hooks/useFinancialData';
+import { useSimplifiedFinancialData } from '@/hooks/useSimplifiedFinancialData';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { TrendingUp, TrendingDown, DollarSign, PieChart, Calendar } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, PieChart, Calendar, BarChart3 } from 'lucide-react';
+import { FinancialBarChart } from '@/components/FinancialBarChart';
 import { ExpenseChart } from '@/components/ExpenseChart';
-import RevenueChart from '@/components/RevenueChart';
-import ExpensesChart from '@/components/ExpensesChart';
-import BalanceChart from '@/components/BalanceChart';
+import { RevenueChart } from '@/components/RevenueChart';
+import { ExpensesChart } from '@/components/ExpensesChart';
+import AnimatedCounter from '@/components/AnimatedCounter';
 
 const Reports = () => {
-  const { 
-    getMonthlyIncome, 
+  const {
+    getMonthlyIncome,
     getMonthlyExpenses,
-    getMonthlyBalance,
-    getExpensesByCategory,
     getMonthlyData,
-    getInvestmentsByType,
-    loading 
-  } = useFinancialData();
+    getExpensesByCategory,
+    loading
+  } = useSimplifiedFinancialData();
 
-  const [selectedMonth, setSelectedMonth] = useState<string>(() => {
-    const now = new Date();
-    return `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}`;
-  });
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear().toString());
+  const [selectedMonth, setSelectedMonth] = useState((new Date().getMonth() + 1).toString());
 
-  const [year, month] = selectedMonth.split('-').map(Number);
-  const monthlyIncome = getMonthlyIncome(month - 1, year);
-  const monthlyExpenses = getMonthlyExpenses(month - 1, year);
-  const monthlyBalance = getMonthlyBalance(month - 1, year);
-  const expensesByCategory = getExpensesByCategory(month - 1, year);
-  const monthlyData = getMonthlyData(12);
-  const investmentsByType = getInvestmentsByType();
+  const currentYear = new Date().getFullYear();
+  const years = Array.from({ length: 5 }, (_, i) => currentYear - i);
+  const months = [
+    { value: '1', label: 'Janeiro' },
+    { value: '2', label: 'Fevereiro' },
+    { value: '3', label: 'Março' },
+    { value: '4', label: 'Abril' },
+    { value: '5', label: 'Maio' },
+    { value: '6', label: 'Junho' },
+    { value: '7', label: 'Julho' },
+    { value: '8', label: 'Agosto' },
+    { value: '9', label: 'Setembro' },
+    { value: '10', label: 'Outubro' },
+    { value: '11', label: 'Novembro' },
+    { value: '12', label: 'Dezembro' }
+  ];
+
+  // Dados mensais
+  const monthlyIncome = getMonthlyIncome(parseInt(selectedMonth) - 1, parseInt(selectedYear));
+  const monthlyExpenses = getMonthlyExpenses(parseInt(selectedMonth) - 1, parseInt(selectedYear));
+  const monthlyBalance = monthlyIncome - monthlyExpenses;
+  const monthlyExpensesByCategory = getExpensesByCategory(parseInt(selectedMonth) - 1, parseInt(selectedYear));
+
+  // Dados anuais
+  const getAnnualData = () => {
+    let annualIncome = 0;
+    let annualExpenses = 0;
+    const monthlyBreakdown = [];
+    
+    for (let month = 0; month < 12; month++) {
+      const income = getMonthlyIncome(month, parseInt(selectedYear));
+      const expenses = getMonthlyExpenses(month, parseInt(selectedYear));
+      annualIncome += income;
+      annualExpenses += expenses;
+      
+      monthlyBreakdown.push({
+        month: months[month].label,
+        income,
+        expenses,
+        balance: income - expenses
+      });
+    }
+    
+    return {
+      annualIncome,
+      annualExpenses,
+      annualBalance: annualIncome - annualExpenses,
+      monthlyBreakdown
+    };
+  };
+
+  const annualData = getAnnualData();
+
+  // Dados de receitas para o gráfico de linha
+  const revenueData = annualData.monthlyBreakdown.map(item => ({
+    month: item.month.substring(0, 3),
+    revenue: item.income
+  }));
+
+  // Dados de despesas para o gráfico de barras
+  const expensesData = annualData.monthlyBreakdown.map(item => ({
+    month: item.month.substring(0, 3),
+    expenses: item.expenses
+  }));
 
   if (loading) {
     return (
@@ -41,77 +96,24 @@ const Reports = () => {
     );
   }
 
-  const backgroundSvg = `data:image/svg+xml,%3Csvg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="none" fill-rule="evenodd"%3E%3Cg fill="%23ffffff" fill-opacity="0.02"%3E%3Ccircle cx="30" cy="30" r="2"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E`;
-
-  const months = [
-    { value: '2024-01', label: 'Janeiro 2024' },
-    { value: '2024-02', label: 'Fevereiro 2024' },
-    { value: '2024-03', label: 'Março 2024' },
-    { value: '2024-04', label: 'Abril 2024' },
-    { value: '2024-05', label: 'Maio 2024' },
-    { value: '2024-06', label: 'Junho 2024' },
-    { value: '2024-07', label: 'Julho 2024' },
-    { value: '2024-08', label: 'Agosto 2024' },
-    { value: '2024-09', label: 'Setembro 2024' },
-    { value: '2024-10', label: 'Outubro 2024' },
-    { value: '2024-11', label: 'Novembro 2024' },
-    { value: '2024-12', label: 'Dezembro 2024' },
-    { value: '2025-01', label: 'Janeiro 2025' },
-    { value: '2025-02', label: 'Fevereiro 2025' },
-    { value: '2025-03', label: 'Março 2025' },
-    { value: '2025-04', label: 'Abril 2025' },
-    { value: '2025-05', label: 'Maio 2025' },
-    { value: '2025-06', label: 'Junho 2025' },
-    { value: '2025-07', label: 'Julho 2025' },
-    { value: '2025-08', label: 'Agosto 2025' },
-    { value: '2025-09', label: 'Setembro 2025' },
-    { value: '2025-10', label: 'Outubro 2025' },
-    { value: '2025-11', label: 'Novembro 2025' },
-    { value: '2025-12', label: 'Dezembro 2025' },
-  ];
-
-  // Preparar dados para os gráficos
-  const revenueData = monthlyData.map(item => ({
-    month: item.month,
-    revenue: item.income
-  }));
-
-  const expensesData = monthlyData.map(item => ({
-    month: item.month,
-    expenses: item.expenses
-  }));
-
-  const balanceData = monthlyData.map(item => ({
-    month: item.month,
-    balance: item.income - item.expenses,
-    revenue: item.income,
-    expenses: item.expenses
-  }));
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-green-950 to-slate-900">
-      <div className="absolute inset-0 opacity-20" style={{ backgroundImage: `url("${backgroundSvg}")` }}></div>
-      
-      <div className="relative z-10 container mx-auto px-4 py-8">
-        <div className="flex justify-between items-center mb-8">
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-green-950 to-slate-900 p-8">
+      <div className="max-w-7xl mx-auto space-y-8">
+        {/* Header */}
+        <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-white flex items-center">
-              <PieChart className="mr-3 h-8 w-8 text-green-400" />
-              Relatórios Financeiros
-            </h1>
+            <h1 className="text-3xl font-bold text-white">Relatórios Financeiros</h1>
             <p className="text-gray-400 mt-2">Análise detalhada das suas finanças</p>
           </div>
-
           <div className="flex items-center space-x-4">
-            <Calendar className="h-5 w-5 text-gray-400" />
-            <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-              <SelectTrigger className="w-48 bg-gray-800 border-gray-700 text-white">
+            <Select value={selectedYear} onValueChange={setSelectedYear}>
+              <SelectTrigger className="w-32 bg-gray-800 border-gray-700 text-white">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent className="bg-gray-800 border-gray-700">
-                {months.map((month) => (
-                  <SelectItem key={month.value} value={month.value} className="text-white">
-                    {month.label}
+                {years.map(year => (
+                  <SelectItem key={year} value={year.toString()} className="text-white">
+                    {year}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -119,107 +121,216 @@ const Reports = () => {
           </div>
         </div>
 
-        {/* KPIs for selected month */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <Card className="backdrop-blur-sm bg-black/40 border-green-800/30">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-gray-300">Receitas do Mês</CardTitle>
-              <TrendingUp className="h-4 w-4 text-green-400" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-400">
-                R$ {monthlyIncome.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-              </div>
-              <p className="text-xs text-gray-400">
-                {new Date(year, month - 1).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}
-              </p>
-            </CardContent>
-          </Card>
+        {/* Tabs for Monthly and Annual Reports */}
+        <Tabs defaultValue="monthly" className="w-full">
+          <TabsList className="grid w-full grid-cols-2 bg-gray-800/50 mb-8">
+            <TabsTrigger value="monthly" className="text-gray-300 data-[state=active]:bg-green-600 data-[state=active]:text-white">
+              <Calendar className="h-4 w-4 mr-2" />
+              Relatório Mensal
+            </TabsTrigger>
+            <TabsTrigger value="annual" className="text-gray-300 data-[state=active]:bg-green-600 data-[state=active]:text-white">
+              <BarChart3 className="h-4 w-4 mr-2" />
+              Relatório Anual
+            </TabsTrigger>
+          </TabsList>
 
-          <Card className="backdrop-blur-sm bg-black/40 border-green-800/30">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-gray-300">Despesas do Mês</CardTitle>
-              <TrendingDown className="h-4 w-4 text-red-400" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-red-400">
-                R$ {monthlyExpenses.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-              </div>
-              <p className="text-xs text-gray-400">
-                {new Date(year, month - 1).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}
-              </p>
-            </CardContent>
-          </Card>
+          {/* Monthly Report */}
+          <TabsContent value="monthly" className="space-y-8">
+            <div className="flex items-center space-x-4 mb-6">
+              <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+                <SelectTrigger className="w-40 bg-gray-800 border-gray-700 text-white">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-gray-800 border-gray-700">
+                  {months.map(month => (
+                    <SelectItem key={month.value} value={month.value} className="text-white">
+                      {month.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <span className="text-white">de {selectedYear}</span>
+            </div>
 
-          <Card className="backdrop-blur-sm bg-black/40 border-green-800/30">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-gray-300">Saldo do Mês</CardTitle>
-              <DollarSign className={`h-4 w-4 ${monthlyBalance >= 0 ? 'text-green-400' : 'text-red-400'}`} />
-            </CardHeader>
-            <CardContent>
-              <div className={`text-2xl font-bold ${monthlyBalance >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                R$ {monthlyBalance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-              </div>
-              <p className="text-xs text-gray-400">
-                Receitas - Despesas
-              </p>
-            </CardContent>
-          </Card>
-        </div>
+            {/* Monthly KPIs */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <Card className="backdrop-blur-sm bg-black/40 border-green-800/30">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium text-gray-300">Receitas do Mês</CardTitle>
+                  <TrendingUp className="h-4 w-4 text-green-400" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-green-400">
+                    <AnimatedCounter value={monthlyIncome} prefix="R$ " />
+                  </div>
+                </CardContent>
+              </Card>
 
-        {/* Charts Section - Primeira linha */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          <Card className="backdrop-blur-sm bg-black/40 border-green-800/30">
-            <CardHeader>
-              <CardTitle className="text-white flex items-center">
-                <TrendingUp className="mr-2 h-5 w-5 text-green-400" />
-                Evolução de Receitas (12 meses)
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <RevenueChart data={revenueData} />
-            </CardContent>
-          </Card>
+              <Card className="backdrop-blur-sm bg-black/40 border-green-800/30">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium text-gray-300">Despesas do Mês</CardTitle>
+                  <TrendingDown className="h-4 w-4 text-red-400" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-red-400">
+                    <AnimatedCounter value={monthlyExpenses} prefix="R$ " />
+                  </div>
+                </CardContent>
+              </Card>
 
-          <Card className="backdrop-blur-sm bg-black/40 border-green-800/30">
-            <CardHeader>
-              <CardTitle className="text-white flex items-center">
-                <TrendingDown className="mr-2 h-5 w-5 text-red-400" />
-                Evolução de Despesas (12 meses)
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ExpensesChart data={expensesData} />
-            </CardContent>
-          </Card>
-        </div>
+              <Card className="backdrop-blur-sm bg-black/40 border-green-800/30">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium text-gray-300">Saldo do Mês</CardTitle>
+                  <DollarSign className={`h-4 w-4 ${monthlyBalance >= 0 ? 'text-green-400' : 'text-red-400'}`} />
+                </CardHeader>
+                <CardContent>
+                  <div className={`text-2xl font-bold ${monthlyBalance >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                    <AnimatedCounter value={monthlyBalance} prefix="R$ " />
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
 
-        {/* Charts Section - Segunda linha */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          <Card className="backdrop-blur-sm bg-black/40 border-green-800/30">
-            <CardHeader>
-              <CardTitle className="text-white flex items-center">
-                <DollarSign className="mr-2 h-5 w-5 text-blue-400" />
-                Balanço Mensal (Receitas - Despesas)
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <BalanceChart data={balanceData} />
-            </CardContent>
-          </Card>
+            {/* Monthly Charts */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              <Card className="backdrop-blur-sm bg-black/40 border-green-800/30">
+                <CardHeader>
+                  <CardTitle className="text-white">Despesas por Categoria</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ExpenseChart data={monthlyExpensesByCategory} />
+                </CardContent>
+              </Card>
 
-          <Card className="backdrop-blur-sm bg-black/40 border-green-800/30">
-            <CardHeader>
-              <CardTitle className="text-white flex items-center">
-                <PieChart className="mr-2 h-5 w-5 text-purple-400" />
-                Despesas por Categoria
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ExpenseChart data={expensesByCategory} />
-            </CardContent>
-          </Card>
-        </div>
+              <Card className="backdrop-blur-sm bg-black/40 border-green-800/30">
+                <CardHeader>
+                  <CardTitle className="text-white">Análise Mensal</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-300">Taxa de Economia:</span>
+                      <span className={`font-bold ${monthlyBalance >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                        {monthlyIncome > 0 ? ((monthlyBalance / monthlyIncome) * 100).toFixed(1) : 0}%
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-300">Maior Categoria de Gasto:</span>
+                      <span className="text-white font-bold">
+                        {monthlyExpensesByCategory.length > 0 
+                          ? monthlyExpensesByCategory.reduce((max, cat) => 
+                              cat.value > max.value ? cat : max
+                            ).name
+                          : 'N/A'
+                        }
+                      </span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          {/* Annual Report */}
+          <TabsContent value="annual" className="space-y-8">
+            {/* Annual KPIs */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <Card className="backdrop-blur-sm bg-black/40 border-green-800/30">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium text-gray-300">Receitas do Ano</CardTitle>
+                  <TrendingUp className="h-4 w-4 text-green-400" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-green-400">
+                    <AnimatedCounter value={annualData.annualIncome} prefix="R$ " />
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="backdrop-blur-sm bg-black/40 border-green-800/30">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium text-gray-300">Despesas do Ano</CardTitle>
+                  <TrendingDown className="h-4 w-4 text-red-400" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-red-400">
+                    <AnimatedCounter value={annualData.annualExpenses} prefix="R$ " />
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="backdrop-blur-sm bg-black/40 border-green-800/30">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium text-gray-300">Saldo do Ano</CardTitle>
+                  <DollarSign className={`h-4 w-4 ${annualData.annualBalance >= 0 ? 'text-green-400' : 'text-red-400'}`} />
+                </CardHeader>
+                <CardContent>
+                  <div className={`text-2xl font-bold ${annualData.annualBalance >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                    <AnimatedCounter value={annualData.annualBalance} prefix="R$ " />
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Annual Charts */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              <Card className="backdrop-blur-sm bg-black/40 border-green-800/30">
+                <CardHeader>
+                  <CardTitle className="text-white">Evolução das Receitas - {selectedYear}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <RevenueChart data={revenueData} />
+                </CardContent>
+              </Card>
+
+              <Card className="backdrop-blur-sm bg-black/40 border-green-800/30">
+                <CardHeader>
+                  <CardTitle className="text-white">Evolução das Despesas - {selectedYear}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ExpensesChart data={expensesData} />
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Annual Breakdown Table */}
+            <Card className="backdrop-blur-sm bg-black/40 border-green-800/30">
+              <CardHeader>
+                <CardTitle className="text-white">Detalhamento Mensal - {selectedYear}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-gray-700">
+                        <th className="text-left py-2 text-gray-300">Mês</th>
+                        <th className="text-right py-2 text-gray-300">Receitas</th>
+                        <th className="text-right py-2 text-gray-300">Despesas</th>
+                        <th className="text-right py-2 text-gray-300">Saldo</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {annualData.monthlyBreakdown.map((item, index) => (
+                        <tr key={index} className="border-b border-gray-800">
+                          <td className="py-2 text-white">{item.month}</td>
+                          <td className="py-2 text-right text-green-400">
+                            R$ {item.income.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          </td>
+                          <td className="py-2 text-right text-red-400">
+                            R$ {item.expenses.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          </td>
+                          <td className={`py-2 text-right font-bold ${item.balance >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                            R$ {item.balance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -54,13 +53,13 @@ export const useSimplifiedFinancialData = () => {
   const [categories, setCategories] = useState<ExpenseCategory[]>([]);
   const [investments, setInvestments] = useState<Investment[]>([]);
   const [investmentTypes, setInvestmentTypes] = useState<InvestmentType[]>([]);
-  const [accountBalance, setAccountBalance] = useState(0); // Valor em conta (manual)
+  const [accountBalance, setAccountBalance] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (user) {
       fetchAllData();
-      loadAccountBalance(); // Carrega o valor em conta salvo
+      loadAccountBalance();
     } else {
       resetData();
     }
@@ -117,7 +116,6 @@ export const useSimplifiedFinancialData = () => {
       setInvestments(investmentsData.data || []);
       setInvestmentTypes(investmentTypesData.data || []);
 
-      // Recarregar o saldo após buscar dados
       loadAccountBalance();
     } catch (error) {
       console.error('Error fetching financial data:', error);
@@ -386,6 +384,16 @@ export const useSimplifiedFinancialData = () => {
     if (!user) return { error: 'No user logged in' };
 
     try {
+      // Se quantidade ou preço médio foram atualizados, recalcular total_invested
+      if (updates.quantity !== undefined || updates.average_price !== undefined) {
+        const currentInvestment = investments.find(inv => inv.id === investmentId);
+        if (currentInvestment) {
+          const newQuantity = updates.quantity !== undefined ? updates.quantity : currentInvestment.quantity;
+          const newAveragePrice = updates.average_price !== undefined ? updates.average_price : currentInvestment.average_price;
+          updates.total_invested = Number(newQuantity) * Number(newAveragePrice);
+        }
+      }
+
       const { error } = await supabase
         .from('investments')
         .update(updates)
@@ -420,9 +428,16 @@ export const useSimplifiedFinancialData = () => {
     if (!user) return { error: 'No user logged in' };
 
     try {
+      // Calcular o total_invested baseado na quantidade e preço médio
+      const totalInvested = Number(investment.quantity) * Number(investment.average_price);
+      
       const { error } = await supabase
         .from('investments')
-        .insert({ ...investment, user_id: user.id });
+        .insert({ 
+          ...investment, 
+          user_id: user.id,
+          total_invested: totalInvested
+        });
 
       if (error) throw error;
       await fetchAllData();
