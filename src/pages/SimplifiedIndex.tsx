@@ -272,7 +272,7 @@ const SimplifiedIndex = () => {
             <div className="flex items-center justify-between">
               <SimplifiedQuickActions onTransactionAdded={handleUpdate} />
               
-              {/* Botão de Adicionar Investimento */}
+              {/* Botão de + Investimento */}
               <Dialog open={investmentDialogOpen} onOpenChange={setInvestmentDialogOpen}>
                 <DialogTrigger asChild>
                   <Button className="bg-gradient-to-r from-purple-500 to-violet-600 hover:from-purple-400 hover:to-violet-500 text-white shadow-lg">

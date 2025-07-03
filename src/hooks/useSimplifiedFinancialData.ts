@@ -1,481 +1,366 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-
-interface Transaction {
-  id: string;
-  type: 'income' | 'expense';
-  amount: number;
-  description: string;
-  date: string;
-  category_id?: string;
-  competence_month?: number;
-  competence_year?: number;
-  due_date?: string;
-  is_recurring?: boolean;
-  recurring_day?: number;
-  is_paid?: boolean;
-}
-
-interface Goal {
-  id: string;
-  name: string;
-  target_amount: number;
-  current_amount: number;
-  priority: 'high' | 'medium' | 'low';
-}
-
-interface ExpenseCategory {
-  id: string;
-  name: string;
-  color: string;
-}
-
-interface Investment {
-  id: string;
-  asset_name: string;
-  asset_type_id: string;
-  quantity: number;
-  average_price: number;
-  total_invested: number;
-  asset_type?: { name: string };
-}
-
-interface InvestmentType {
-  id: string;
-  name: string;
-}
+import { toast } from '@/hooks/use-toast';
 
 export const useSimplifiedFinancialData = () => {
   const { user } = useAuth();
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [goals, setGoals] = useState<Goal[]>([]);
-  const [categories, setCategories] = useState<ExpenseCategory[]>([]);
-  const [investments, setInvestments] = useState<Investment[]>([]);
-  const [investmentTypes, setInvestmentTypes] = useState<InvestmentType[]>([]);
-  const [accountBalance, setAccountBalance] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [transactions, setTransactions] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [goals, setGoals] = useState([]);
+  const [investments, setInvestments] = useState([]);
+  const [investmentTypes, setInvestmentTypes] = useState([]);
+  const [accountBalance, setAccountBalance] = useState(0);
 
-  useEffect(() => {
-    if (user) {
-      fetchAllData();
-      loadAccountBalance();
-    } else {
-      resetData();
-    }
-  }, [user]);
-
-  const resetData = () => {
-    setTransactions([]);
-    setGoals([]);
-    setCategories([]);
-    setInvestments([]);
-    setInvestmentTypes([]);
-    setAccountBalance(0);
-    setLoading(false);
-  };
-
-  const loadAccountBalance = () => {
-    const savedBalance = localStorage.getItem(`account_balance_${user?.id}`);
-    if (savedBalance) {
-      setAccountBalance(parseFloat(savedBalance));
-    }
-  };
-
-  const fetchAllData = async () => {
+  const fetchData = useCallback(async () => {
     if (!user) return;
 
     try {
+      setLoading(true);
+      
+      // Fetch all data in parallel
       const [
-        transactionsData,
-        goalsData,
-        categoriesData,
-        investmentsData,
-        investmentTypesData
+        transactionsRes,
+        categoriesRes,
+        goalsRes,
+        investmentsRes,
+        investmentTypesRes
       ] = await Promise.all([
-        supabase.from('transactions').select('*').eq('user_id', user.id).order('date', { ascending: false }),
-        supabase.from('financial_goals').select('*').eq('user_id', user.id),
-        supabase.from('expense_categories').select('*').eq('user_id', user.id),
-        supabase.from('investments').select('*, investment_types(name)').eq('user_id', user.id),
-        supabase.from('investment_types').select('*')
+        supabase
+          .from('transactions')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('date', { ascending: false }),
+        supabase
+          .from('expense_categories')
+          .select('*')
+          .eq('user_id', user.id),
+        supabase
+          .from('financial_goals')
+          .select('*')
+          .eq('user_id', user.id),
+        supabase
+          .from('investments')
+          .select(`
+            *,
+            asset_type:investment_types(name)
+          `)
+          .eq('user_id', user.id),
+        supabase
+          .from('investment_types')
+          .select('*')
       ]);
 
-      [transactionsData, goalsData, categoriesData, investmentsData, investmentTypesData].forEach(result => {
-        if (result.error) throw result.error;
-      });
+      if (transactionsRes.error) throw transactionsRes.error;
+      if (categoriesRes.error) throw categoriesRes.error;
+      if (goalsRes.error) throw goalsRes.error;
+      if (investmentsRes.error) throw investmentsRes.error;
+      if (investmentTypesRes.error) throw investmentTypesRes.error;
 
-      setTransactions((transactionsData.data || []).map(t => ({
-        ...t,
-        type: t.type as 'income' | 'expense'
-      })));
-      setGoals((goalsData.data || []).map(g => ({
-        ...g,
-        priority: g.priority as 'high' | 'medium' | 'low'
-      })));
-      setCategories(categoriesData.data || []);
-      setInvestments(investmentsData.data || []);
-      setInvestmentTypes(investmentTypesData.data || []);
+      setTransactions(transactionsRes.data || []);
+      setCategories(categoriesRes.data || []);
+      setGoals(goalsRes.data || []);
+      setInvestments(investmentsRes.data || []);
+      setInvestmentTypes(investmentTypesRes.data || []);
 
-      loadAccountBalance();
     } catch (error) {
-      console.error('Error fetching financial data:', error);
+      console.error('Error fetching data:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao carregar dados financeiros.",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
+  }, [user]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  const addInvestment = async (investmentData: {
+    asset_name: string;
+    asset_type_id: string;
+    quantity: number;
+    average_price: number;
+  }) => {
+    if (!user) throw new Error('User not authenticated');
+
+    const { error } = await supabase
+      .from('investments')
+      .insert({
+        asset_name: investmentData.asset_name,
+        asset_type_id: investmentData.asset_type_id,
+        quantity: investmentData.quantity,
+        average_price: investmentData.average_price,
+        user_id: user.id
+      });
+
+    if (error) throw error;
+    
+    await fetchData();
+    return { error: null };
+  };
+
+  const getMonthlyIncome = (month?: number, year?: number) => {
+    const now = new Date();
+    const targetMonth = month !== undefined ? month : now.getMonth();
+    const targetYear = year !== undefined ? year : now.getFullYear();
+    
+    return transactions
+      .filter(t => 
+        t.type === 'income' && 
+        t.competence_month === targetMonth + 1 && 
+        t.competence_year === targetYear
+      )
+      .reduce((sum, t) => sum + Number(t.amount), 0);
+  };
+
+  const getMonthlyExpenses = (month?: number, year?: number) => {
+    const now = new Date();
+    const targetMonth = month !== undefined ? month : now.getMonth();
+    const targetYear = year !== undefined ? year : now.getFullYear();
+    
+    return transactions
+      .filter(t => 
+        t.type === 'expense' && 
+        t.competence_month === targetMonth + 1 && 
+        t.competence_year === targetYear
+      )
+      .reduce((sum, t) => sum + Number(t.amount), 0);
+  };
+
+  const getUnpaidExpenses = (month?: number, year?: number) => {
+    const now = new Date();
+    const targetMonth = month !== undefined ? month : now.getMonth();
+    const targetYear = year !== undefined ? year : now.getFullYear();
+    
+    return transactions
+      .filter(t => 
+        t.type === 'expense' && 
+        !t.is_paid && 
+        t.competence_month === targetMonth + 1 && 
+        t.competence_year === targetYear
+      )
+      .reduce((sum, t) => sum + Number(t.amount), 0);
   };
 
   const getTotalInvestments = () => {
-    return investments.reduce((sum, investment) => sum + Number(investment.total_invested), 0);
+    return investments.reduce((sum, inv) => sum + (Number(inv.quantity) * Number(inv.average_price)), 0);
   };
 
   const getTotalGoals = () => {
     return goals.reduce((sum, goal) => sum + Number(goal.current_amount), 0);
   };
 
-  // Patrimônio líquido = Investimentos + Metas + Valor em conta
-  const getNetWorth = () => {
-    return getTotalInvestments() + getTotalGoals() + accountBalance;
-  };
-
-  const getMonthlyIncome = (month?: number, year?: number) => {
-    const targetMonth = month ?? new Date().getMonth();
-    const targetYear = year ?? new Date().getFullYear();
-    
-    return transactions
-      .filter(t => {
-        return t.type === 'income' && 
-               t.competence_month === (targetMonth + 1) && 
-               t.competence_year === targetYear &&
-               t.is_paid;
-      })
-      .reduce((sum, t) => sum + Number(t.amount), 0);
-  };
-
-  const getMonthlyExpenses = (month?: number, year?: number) => {
-    const targetMonth = month ?? new Date().getMonth();
-    const targetYear = year ?? new Date().getFullYear();
-    
-    return transactions
-      .filter(t => {
-        return t.type === 'expense' && 
-               t.competence_month === (targetMonth + 1) && 
-               t.competence_year === targetYear &&
-               t.is_paid;
-      })
-      .reduce((sum, t) => sum + Number(t.amount), 0);
-  };
-
-  const getUnpaidExpenses = (month?: number, year?: number) => {
-    const targetMonth = month ?? new Date().getMonth();
-    const targetYear = year ?? new Date().getFullYear();
-    
-    return transactions
-      .filter(t => {
-        return t.type === 'expense' && 
-               t.competence_month === (targetMonth + 1) && 
-               t.competence_year === targetYear &&
-               !t.is_paid;
-      })
-      .reduce((sum, t) => sum + Number(t.amount), 0);
-  };
-
-  // Valor em conta (manual)
   const getAccountBalance = () => {
     return accountBalance;
   };
 
-  // Saldo atual = Valor em conta - Despesas pagas do mês atual
   const getCurrentBalance = () => {
-    const currentMonth = new Date().getMonth() + 1;
+    const currentMonth = new Date().getMonth();
     const currentYear = new Date().getFullYear();
-    const totalPaidExpensesThisMonth = transactions
+    const monthlyIncome = getMonthlyIncome(currentMonth, currentYear);
+    const paidExpenses = transactions
       .filter(t => 
         t.type === 'expense' && 
-        t.is_paid &&
-        t.competence_month === currentMonth &&
+        t.is_paid && 
+        t.competence_month === currentMonth + 1 && 
         t.competence_year === currentYear
       )
       .reduce((sum, t) => sum + Number(t.amount), 0);
-    return accountBalance - totalPaidExpensesThisMonth;
+    
+    return accountBalance + monthlyIncome - paidExpenses;
   };
 
-  // Saldo projetado = Saldo atual - Despesas pendentes do mês atual
   const getProjectedBalance = () => {
-    const unpaidExpensesThisMonth = getUnpaidExpenses(); // A sua função getUnpaidExpenses já filtra pelo mês atual
-    return getCurrentBalance() - unpaidExpensesThisMonth;
+    const currentBalance = getCurrentBalance();
+    const unpaidExpenses = getUnpaidExpenses();
+    return currentBalance - unpaidExpenses;
   };
 
-  const getExpensesByCategory = (month?: number, year?: number) => {
-    const targetMonth = month ?? new Date().getMonth();
-    const targetYear = year ?? new Date().getFullYear();
-    
-    const monthlyExpenses = transactions.filter(t => {
-      return t.type === 'expense' && 
-             t.competence_month === (targetMonth + 1) && 
-             t.competence_year === targetYear &&
-             t.is_paid;
-    });
-
-    const categoryTotals = categories.map(category => {
-      const total = monthlyExpenses
-        .filter(t => t.category_id === category.id)
-        .reduce((sum, t) => sum + Number(t.amount), 0);
-      
-      return {
-        name: category.name,
-        value: total,
-        color: category.color,
-        category_id: category.id
-      };
-    }).filter(item => item.value > 0);
-
-    return categoryTotals;
+  const getNetWorth = () => {
+    const totalInvestments = getTotalInvestments();
+    const totalGoals = getTotalGoals();
+    const currentBalance = getCurrentBalance();
+    return totalInvestments + totalGoals + currentBalance;
   };
 
-  const getMonthlyData = (months: number = 6) => {
-    const data = [];
-    const currentDate = new Date();
-    
-    for (let i = months - 1; i >= 0; i--) {
-      const date = new Date(currentDate.getFullYear(), currentDate.getMonth() - i, 1);
+  const getMonthlyData = () => {
+    const monthlyData = [];
+    for (let i = 11; i >= 0; i--) {
+      const date = new Date();
+      date.setMonth(date.getMonth() - i);
       const month = date.getMonth();
       const year = date.getFullYear();
       
-      data.push({
-        month: date.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' }),
-        income: getMonthlyIncome(month, year),
-        expenses: getMonthlyExpenses(month, year)
+      const income = getMonthlyIncome(month, year);
+      const expenses = getMonthlyExpenses(month, year);
+      
+      monthlyData.push({
+        month: date.toLocaleDateString('pt-BR', { month: 'short' }),
+        income,
+        expenses,
+        balance: income - expenses
       });
     }
+    return monthlyData;
+  };
+
+  const getExpensesByCategory = (month?: number, year?: number) => {
+    const now = new Date();
+    const targetMonth = month !== undefined ? month : now.getMonth();
+    const targetYear = year !== undefined ? year : now.getFullYear();
     
-    return data;
-  };
+    const expensesByCategory = new Map();
+    
+    transactions
+      .filter(t => 
+        t.type === 'expense' && 
+        t.competence_month === targetMonth + 1 && 
+        t.competence_year === targetYear
+      )
+      .forEach(transaction => {
+        const category = categories.find(c => c.id === transaction.category_id);
+        const categoryName = category?.name || 'Outros';
+        const categoryColor = category?.color || '#8B5CF6';
+        
+        const current = expensesByCategory.get(categoryName) || 0;
+        expensesByCategory.set(categoryName, current + Number(transaction.amount));
+      });
 
-  const addTransaction = async (transaction: Omit<Transaction, 'id'>) => {
-    if (!user) return { error: 'No user logged in' };
-
-    try {
-      const transactionDate = new Date(transaction.date);
-      
-      const competenceMonth = transaction.competence_month ?? (transactionDate.getMonth() + 1);
-      const competenceYear = transaction.competence_year ?? transactionDate.getFullYear();
-
-      const { error } = await supabase
-        .from('transactions')
-        .insert({ 
-          ...transaction, 
-          user_id: user.id,
-          competence_month: competenceMonth,
-          competence_year: competenceYear
-        });
-
-      if (error) throw error;
-      await fetchAllData();
-      return { error: null };
-    } catch (error) {
-      return { error };
-    }
-  };
-
-  const updateTransaction = async (transactionId: string, updates: Partial<Transaction>) => {
-    if (!user) return { error: 'No user logged in' };
-
-    try {
-      const { error } = await supabase
-        .from('transactions')
-        .update(updates)
-        .eq('id', transactionId);
-
-      if (error) throw error;
-      await fetchAllData();
-      return { error: null };
-    } catch (error) {
-      return { error };
-    }
-  };
-
-  const deleteTransaction = async (transactionId: string) => {
-    if (!user) return { error: 'No user logged in' };
-
-    try {
-      const { error } = await supabase
-        .from('transactions')
-        .delete()
-        .eq('id', transactionId);
-
-      if (error) throw error;
-      await fetchAllData();
-      return { error: null };
-    } catch (error) {
-      return { error };
-    }
-  };
-
-  const markTransactionAsPaid = async (transactionId: string) => {
-    if (!user) return { error: 'No user logged in' };
-
-    try {
-      const { error } = await supabase
-        .from('transactions')
-        .update({ is_paid: true })
-        .eq('id', transactionId);
-
-      if (error) throw error;
-      await fetchAllData();
-      return { error: null };
-    } catch (error) {
-      return { error };
-    }
-  };
-
-  const adjustAccountBalance = async (newBalance: number) => {
-    if (!user) return { error: 'No user logged in' };
-
-    try {
-      setAccountBalance(newBalance);
-      localStorage.setItem(`account_balance_${user.id}`, newBalance.toString());
-      
-      // Forçar atualização dos dados após ajustar o saldo
-      await fetchAllData();
-      return { error: null };
-    } catch (error) {
-      return { error };
-    }
+    return Array.from(expensesByCategory.entries()).map(([name, value]) => ({
+      name,
+      value,
+      color: categories.find(c => c.name === name)?.color || '#8B5CF6'
+    }));
   };
 
   const addMoneyToGoal = async (goalId: string, amount: number) => {
-    if (!user) return { error: 'No user logged in' };
+    if (!user) throw new Error('User not authenticated');
 
-    try {
-      const goal = goals.find(g => g.id === goalId);
-      if (!goal) throw new Error('Meta não encontrada');
+    const goal = goals.find(g => g.id === goalId);
+    if (!goal) throw new Error('Goal not found');
 
-      const { error } = await supabase
-        .from('financial_goals')
-        .update({ current_amount: Number(goal.current_amount) + amount })
-        .eq('id', goalId);
+    const newAmount = Number(goal.current_amount) + amount;
 
-      if (error) throw error;
-      await fetchAllData();
-      return { error: null };
-    } catch (error) {
-      return { error };
-    }
+    const { error } = await supabase
+      .from('financial_goals')
+      .update({ current_amount: newAmount })
+      .eq('id', goalId)
+      .eq('user_id', user.id);
+
+    if (error) throw error;
+    
+    await fetchData();
   };
 
-  const updateGoal = async (goalId: string, updates: Partial<Goal>) => {
-    if (!user) return { error: 'No user logged in' };
-
-    try {
-      const { error } = await supabase
-        .from('financial_goals')
-        .update(updates)
-        .eq('id', goalId);
-
-      if (error) throw error;
-      await fetchAllData();
-      return { error: null };
-    } catch (error) {
-      return { error };
-    }
+  const adjustAccountBalance = async (newBalance: number) => {
+    setAccountBalance(newBalance);
   };
 
-  const updateInvestment = async (investmentId: string, updates: Partial<Investment>) => {
-    if (!user) return { error: 'No user logged in' };
+  const markTransactionAsPaid = async (transactionId: string) => {
+    if (!user) throw new Error('User not authenticated');
 
-    try {
-      // Se quantidade ou preço médio foram atualizados, recalcular total_invested
-      if (updates.quantity !== undefined || updates.average_price !== undefined) {
-        const currentInvestment = investments.find(inv => inv.id === investmentId);
-        if (currentInvestment) {
-          const newQuantity = updates.quantity !== undefined ? updates.quantity : currentInvestment.quantity;
-          const newAveragePrice = updates.average_price !== undefined ? updates.average_price : currentInvestment.average_price;
-          updates.total_invested = Number(newQuantity) * Number(newAveragePrice);
-        }
-      }
+    const { error } = await supabase
+      .from('transactions')
+      .update({ is_paid: true })
+      .eq('id', transactionId)
+      .eq('user_id', user.id);
 
-      const { error } = await supabase
-        .from('investments')
-        .update(updates)
-        .eq('id', investmentId);
-
-      if (error) throw error;
-      await fetchAllData();
-      return { error: null };
-    } catch (error) {
-      return { error };
-    }
+    if (error) throw error;
+    
+    await fetchData();
   };
 
-  const deleteInvestment = async (investmentId: string) => {
-    if (!user) return { error: 'No user logged in' };
+  const addTransaction = async (transactionData: any) => {
+    if (!user) throw new Error('User not authenticated');
 
-    try {
-      const { error } = await supabase
-        .from('investments')
-        .delete()
-        .eq('id', investmentId);
+    const { error } = await supabase
+      .from('transactions')
+      .insert({
+        ...transactionData,
+        user_id: user.id
+      });
 
-      if (error) throw error;
-      await fetchAllData();
-      return { error: null };
-    } catch (error) {
-      return { error };
-    }
+    if (error) throw error;
+    
+    await fetchData();
   };
 
-  const addInvestment = async (investment: Omit<Investment, 'id' | 'total_invested'>) => {
-    if (!user) return { error: 'No user logged in' };
+  const updateTransaction = async (id: string, updates: any) => {
+    if (!user) throw new Error('User not authenticated');
 
-    try {
-      // Calcular o total_invested baseado na quantidade e preço médio
-      const totalInvested = Number(investment.quantity) * Number(investment.average_price);
-      
-      const { error } = await supabase
-        .from('investments')
-        .insert({ 
-          ...investment, 
-          user_id: user.id,
-          total_invested: totalInvested
-        });
+    const { error } = await supabase
+      .from('transactions')
+      .update(updates)
+      .eq('id', id)
+      .eq('user_id', user.id);
 
-      if (error) throw error;
-      await fetchAllData();
-      return { error: null };
-    } catch (error) {
-      return { error };
-    }
+    if (error) throw error;
+    
+    await fetchData();
   };
+
+  const deleteTransaction = async (id: string) => {
+    if (!user) throw new Error('User not authenticated');
+
+    const { error } = await supabase
+      .from('transactions')
+      .delete()
+      .eq('id', id)
+      .eq('user_id', user.id);
+
+    if (error) throw error;
+    
+    await fetchData();
+  };
+
+  const updateGoal = async (id: string, updates: any) => {
+    if (!user) throw new Error('User not authenticated');
+
+    const { error } = await supabase
+      .from('financial_goals')
+      .update(updates)
+      .eq('id', id)
+      .eq('user_id', user.id);
+
+    if (error) throw error;
+    
+    await fetchData();
+  };
+
+  const refetch = fetchData;
 
   return {
+    getMonthlyIncome,
+    getMonthlyExpenses,
+    getUnpaidExpenses,
+    getTotalInvestments,
+    getTotalGoals,
+    getAccountBalance,
+    getCurrentBalance,
+    getProjectedBalance,
+    getNetWorth,
+    getMonthlyData,
+    getExpensesByCategory,
+    addMoneyToGoal,
+    adjustAccountBalance,
+    markTransactionAsPaid,
+    addTransaction,
+    updateTransaction,
+    deleteTransaction,
+    updateGoal,
+    addInvestment,
     transactions,
-    goals,
     categories,
+    goals,
     investments,
     investmentTypes,
     accountBalance,
     loading,
-    getTotalInvestments,
-    getTotalGoals,
-    getNetWorth,
-    getMonthlyIncome,
-    getMonthlyExpenses,
-    getUnpaidExpenses,
-    getAccountBalance,
-    getCurrentBalance,
-    getProjectedBalance,
-    getExpensesByCategory,
-    getMonthlyData,
-    addTransaction,
-    updateTransaction,
-    deleteTransaction,
-    markTransactionAsPaid,
-    adjustAccountBalance,
-    addMoneyToGoal,
-    updateGoal,
-    updateInvestment,
-    deleteInvestment,
-    addInvestment,
-    refetch: fetchAllData
+    refetch
   };
 };

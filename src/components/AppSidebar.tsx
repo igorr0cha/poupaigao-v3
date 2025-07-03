@@ -13,34 +13,27 @@ import {
   Calendar,
   FileText,
   Sparkles,
-  DollarSign
+  DollarSign,
+  ChevronRight,
+  Menu,
+  X
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
-  SidebarHeader,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarTrigger,
-  useSidebar,
-} from "@/components/ui/sidebar";
 import { useAuth } from '@/contexts/AuthContext';
 import { useProfile } from '@/hooks/useProfile';
 import { toast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
 
-const AppSidebar = () => {
+interface AppSidebarProps {
+  isCollapsed: boolean;
+  onToggle: () => void;
+}
+
+const AppSidebar: React.FC<AppSidebarProps> = ({ isCollapsed, onToggle }) => {
   const { user, signOut } = useAuth();
   const { profile } = useProfile();
   const location = useLocation();
-  const { state } = useSidebar();
-  const isCollapsed = state === 'collapsed';
 
   const navItems = [
     { 
@@ -48,56 +41,56 @@ const AppSidebar = () => {
       url: '/', 
       icon: Home,
       description: 'Visão geral das finanças',
-      gradient: 'from-emerald-500 to-green-600'
+      color: 'from-emerald-500 to-green-600'
     },
     { 
       title: 'Receitas', 
       url: '/revenues', 
       icon: TrendingUp,
       description: 'Gerencie suas receitas',
-      gradient: 'from-green-500 to-emerald-600'
+      color: 'from-green-500 to-emerald-600'
     },
     { 
       title: 'Despesas', 
       url: '/expenses', 
       icon: TrendingDown,
       description: 'Controle seus gastos',
-      gradient: 'from-red-500 to-rose-600'
+      color: 'from-red-500 to-rose-600'
     },
     { 
       title: 'Transações', 
       url: '/transactions', 
       icon: Receipt,
       description: 'Histórico de transações',
-      gradient: 'from-blue-500 to-cyan-600'
+      color: 'from-blue-500 to-cyan-600'
     },
     { 
       title: 'Investimentos', 
       url: '/investments', 
       icon: PieChart,
       description: 'Carteira de investimentos',
-      gradient: 'from-purple-500 to-violet-600'
+      color: 'from-purple-500 to-violet-600'
     },
     { 
       title: 'Metas', 
       url: '/goals', 
       icon: Target,
       description: 'Objetivos financeiros',
-      gradient: 'from-orange-500 to-amber-600'
+      color: 'from-orange-500 to-amber-600'
     },
     { 
       title: 'Histórico', 
       url: '/monthly-history', 
       icon: Calendar,
       description: 'Histórico mensal',
-      gradient: 'from-indigo-500 to-purple-600'
+      color: 'from-indigo-500 to-purple-600'
     },
     { 
       title: 'Relatórios', 
       url: '/reports', 
       icon: FileText,
       description: 'Análises e relatórios',
-      gradient: 'from-pink-500 to-rose-600'
+      color: 'from-pink-500 to-rose-600'
     }
   ];
 
@@ -121,46 +114,80 @@ const AppSidebar = () => {
   };
 
   return (
-    <Sidebar className="border-r-0 bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950">
-      <SidebarHeader className="border-b border-slate-800/50 bg-gradient-to-r from-slate-900/50 to-slate-800/50 backdrop-blur-sm">
-        <div className="space-y-4 p-4">
-          {/* Logo */}
-          <div className="flex items-center justify-center">
-            <div className="relative">
-              <div className="absolute -inset-1 bg-gradient-to-r from-green-400 via-emerald-300 to-green-500 rounded-lg blur opacity-25"></div>
-              <div className="relative bg-slate-950 rounded-lg px-4 py-2 border border-slate-800">
-                <div className="flex items-center space-x-2">
-                  <DollarSign className="h-6 w-6 text-green-400" />
-                  {!isCollapsed && (
-                    <h1 className="text-xl font-bold bg-gradient-to-r from-green-400 via-emerald-300 to-green-500 bg-clip-text text-transparent">
-                      PoupaIgão
-                    </h1>
-                  )}
-                  <Sparkles className="h-4 w-4 text-green-400 animate-pulse" />
+    <div className={cn(
+      "fixed left-0 top-0 h-full z-50 transition-all duration-300 ease-in-out",
+      isCollapsed ? "w-20" : "w-80"
+    )}>
+      {/* Backdrop blur para o estado expandido */}
+      <div className="absolute inset-0 bg-gradient-to-b from-slate-900/95 via-slate-900/98 to-black/95 backdrop-blur-xl border-r border-slate-700/50">
+        {/* Efeito de brilho sutil */}
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-green-500/5 to-transparent"></div>
+      </div>
+
+      <div className="relative h-full flex flex-col">
+        {/* Header com Logo e Toggle */}
+        <div className="p-6 border-b border-slate-700/50">
+          <div className="flex items-center justify-between">
+            {/* Logo */}
+            <div className={cn(
+              "flex items-center transition-all duration-300",
+              isCollapsed ? "justify-center w-full" : "justify-start"
+            )}>
+              <div className="relative group">
+                <div className="absolute -inset-2 bg-gradient-to-r from-green-400 via-emerald-300 to-green-500 rounded-xl blur opacity-20 group-hover:opacity-30 transition-opacity"></div>
+                <div className="relative bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-3 border border-slate-600/50 shadow-2xl">
+                  <DollarSign className="h-8 w-8 text-green-400" />
                 </div>
               </div>
+              
+              {!isCollapsed && (
+                <div className="ml-4">
+                  <h1 className="text-2xl font-bold bg-gradient-to-r from-green-400 via-emerald-300 to-green-500 bg-clip-text text-transparent">
+                    PoupaIgão
+                  </h1>
+                  <div className="flex items-center mt-1">
+                    <Sparkles className="h-3 w-3 text-green-400 mr-1 animate-pulse" />
+                    <span className="text-xs text-slate-400">Finanças Inteligentes</span>
+                  </div>
+                </div>
+              )}
             </div>
+
+            {/* Toggle Button */}
+            <Button
+              onClick={onToggle}
+              variant="ghost"
+              size="sm"
+              className={cn(
+                "p-2 hover:bg-slate-700/50 text-slate-400 hover:text-white transition-all duration-200",
+                isCollapsed && "absolute top-6 right-4"
+              )}
+            >
+              {isCollapsed ? <Menu className="h-5 w-5" /> : <X className="h-5 w-5" />}
+            </Button>
           </div>
 
           {/* User Profile */}
           {!isCollapsed && (
-            <div className="relative">
-              <div className="absolute -inset-1 bg-gradient-to-r from-green-400/20 to-emerald-400/20 rounded-xl blur"></div>
-              <div className="relative bg-slate-900/80 backdrop-blur-sm rounded-xl p-4 border border-slate-700/50">
-                <div className="flex items-center space-x-3">
-                  <div className="relative">
-                    <Avatar className="h-12 w-12 ring-2 ring-green-400/50 shadow-lg">
-                      <AvatarImage src={profile?.avatar_url} />
-                      <AvatarFallback className="bg-gradient-to-br from-green-500 to-emerald-600 text-white font-bold">
-                        {userInitials}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-400 rounded-full border-2 border-slate-900 animate-pulse"></div>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-green-300 text-xs font-medium">Bem-vindo,</p>
-                    <p className="text-white font-semibold truncate">{userName}</p>
-                    <p className="text-xs text-slate-400 truncate">{user?.email}</p>
+            <div className="mt-6">
+              <div className="relative group">
+                <div className="absolute -inset-1 bg-gradient-to-r from-green-400/20 via-emerald-400/20 to-green-400/20 rounded-2xl blur opacity-50 group-hover:opacity-75 transition-opacity"></div>
+                <div className="relative bg-gradient-to-br from-slate-800/80 to-slate-900/80 backdrop-blur-sm rounded-2xl p-4 border border-slate-600/30">
+                  <div className="flex items-center space-x-4">
+                    <div className="relative">
+                      <Avatar className="h-14 w-14 ring-2 ring-green-400/50 shadow-xl">
+                        <AvatarImage src={profile?.avatar_url} />
+                        <AvatarFallback className="bg-gradient-to-br from-green-500 to-emerald-600 text-white font-bold text-lg">
+                          {userInitials}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-green-400 rounded-full border-3 border-slate-900 animate-pulse shadow-lg"></div>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-green-300 text-sm font-medium">Bem-vindo,</p>
+                      <p className="text-white font-bold text-lg truncate">{userName}</p>
+                      <p className="text-sm text-slate-400 truncate">{user?.email}</p>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -169,105 +196,138 @@ const AppSidebar = () => {
 
           {/* Mini Profile for collapsed state */}
           {isCollapsed && (
-            <div className="flex justify-center">
-              <div className="relative">
-                <Avatar className="h-10 w-10 ring-2 ring-green-400/50 shadow-lg">
+            <div className="flex justify-center mt-6">
+              <div className="relative group">
+                <div className="absolute -inset-1 bg-gradient-to-r from-green-400/30 to-emerald-400/30 rounded-full blur opacity-50 group-hover:opacity-75 transition-opacity"></div>
+                <Avatar className="relative h-12 w-12 ring-2 ring-green-400/50 shadow-xl">
                   <AvatarImage src={profile?.avatar_url} />
-                  <AvatarFallback className="bg-gradient-to-br from-green-500 to-emerald-600 text-white font-bold text-sm">
+                  <AvatarFallback className="bg-gradient-to-br from-green-500 to-emerald-600 text-white font-bold">
                     {userInitials}
                   </AvatarFallback>
                 </Avatar>
-                <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-400 rounded-full border-2 border-slate-900 animate-pulse"></div>
+                <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-400 rounded-full border-2 border-slate-900 animate-pulse"></div>
               </div>
             </div>
           )}
         </div>
-      </SidebarHeader>
 
-      <SidebarContent className="px-3 py-4">
-        <SidebarGroup>
-          <SidebarGroupLabel className="text-green-400/70 font-semibold text-xs uppercase tracking-wider mb-4">
-            {!isCollapsed ? 'Menu Principal' : ''}
-          </SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu className="space-y-2">
-              {navItems.map((item) => {
-                const isActive = location.pathname === item.url;
-                
-                return (
-                  <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton asChild isActive={isActive} className="group relative overflow-hidden">
-                      <NavLink
-                        to={item.url}
-                        className={`
-                          flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-300 transform hover:scale-[1.02]
-                          ${isActive 
-                            ? `bg-gradient-to-r ${item.gradient} text-white shadow-lg shadow-${item.gradient.split('-')[1]}-500/25 border border-white/10` 
-                            : 'text-slate-300 hover:bg-slate-800/50 hover:text-white border border-transparent hover:border-slate-700/50'
-                          }
-                        `}
-                      >
-                        <div className="relative">
-                          <item.icon className={`h-5 w-5 ${isActive ? 'drop-shadow-sm' : ''}`} />
-                          {isActive && (
-                            <div className="absolute -inset-1 bg-white/20 rounded-full blur-sm"></div>
-                          )}
+        {/* Navigation */}
+        <div className="flex-1 py-6 px-4 overflow-y-auto">
+          {!isCollapsed && (
+            <div className="mb-6">
+              <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider px-4">
+                Menu Principal
+              </h3>
+            </div>
+          )}
+
+          <nav className="space-y-2">
+            {navItems.map((item) => {
+              const isActive = location.pathname === item.url;
+              
+              return (
+                <div key={item.title} className="group">
+                  <NavLink
+                    to={item.url}
+                    className={cn(
+                      "relative flex items-center rounded-2xl transition-all duration-300 transform hover:scale-[1.02]",
+                      isCollapsed ? "p-4 justify-center" : "p-4",
+                      isActive 
+                        ? `bg-gradient-to-r ${item.color} text-white shadow-2xl border border-white/20` 
+                        : 'text-slate-300 hover:bg-slate-800/50 hover:text-white border border-transparent hover:border-slate-600/50'
+                    )}
+                  >
+                    {/* Active indicator */}
+                    {isActive && (
+                      <div className="absolute -left-1 top-1/2 transform -translate-y-1/2 w-1 h-8 bg-white rounded-full shadow-lg"></div>
+                    )}
+
+                    {/* Icon with glow effect */}
+                    <div className="relative">
+                      <item.icon className={cn(
+                        "h-6 w-6 transition-all duration-200",
+                        isActive && "drop-shadow-lg"
+                      )} />
+                      {isActive && (
+                        <div className="absolute -inset-2 bg-white/20 rounded-lg blur-sm animate-pulse"></div>
+                      )}
+                    </div>
+
+                    {!isCollapsed && (
+                      <>
+                        <div className="ml-4 flex-1">
+                          <span className="font-semibold text-base block">{item.title}</span>
+                          <p className={cn(
+                            "text-xs mt-0.5 transition-colors",
+                            isActive ? 'text-white/80' : 'text-slate-400'
+                          )}>
+                            {item.description}
+                          </p>
                         </div>
-                        {!isCollapsed && (
-                          <div className="flex-1">
-                            <span className="font-medium text-sm">{item.title}</span>
-                            <p className={`text-xs ${isActive ? 'text-white/80' : 'text-slate-400'} mt-0.5`}>
-                              {item.description}
-                            </p>
-                          </div>
-                        )}
-                        {isActive && !isCollapsed && (
-                          <div className="w-1 h-6 bg-white/30 rounded-full"></div>
-                        )}
-                      </NavLink>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                );
-              })}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-      </SidebarContent>
+                        
+                        {/* Arrow indicator */}
+                        <ChevronRight className={cn(
+                          "h-5 w-5 transition-all duration-200",
+                          isActive ? 'text-white/60' : 'text-slate-500 group-hover:text-slate-300'
+                        )} />
+                      </>
+                    )}
 
-      <SidebarFooter className="border-t border-slate-800/50 bg-slate-900/50 backdrop-blur-sm p-4">
-        <SidebarMenu className="space-y-2">
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild>
-              <NavLink
-                to="/profile"
-                className="flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-300 text-slate-300 hover:bg-slate-800/50 hover:text-white border border-transparent hover:border-slate-700/50"
-              >
-                <Settings className="h-5 w-5" />
-                {!isCollapsed && <span className="font-medium text-sm">Configurações</span>}
-              </NavLink>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-          
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild>
-              <Button
-                onClick={handleSignOut}
-                variant="ghost"
-                className="w-full justify-start flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-300 text-slate-300 hover:bg-red-500/10 hover:text-red-400 border border-transparent hover:border-red-500/20"
-              >
-                <LogOut className="h-5 w-5" />
-                {!isCollapsed && <span className="font-medium text-sm">Sair</span>}
-              </Button>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
-        
-        {/* Trigger Button */}
-        <div className="mt-4 flex justify-center">
-          <SidebarTrigger className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-400 hover:to-emerald-400 text-white shadow-lg hover:shadow-xl transition-all duration-300 border-0" />
+                    {/* Hover effect overlay */}
+                    <div className={cn(
+                      "absolute inset-0 rounded-2xl transition-opacity duration-200",
+                      isActive 
+                        ? "bg-white/10" 
+                        : "bg-slate-700/0 group-hover:bg-slate-700/30"
+                    )}></div>
+                  </NavLink>
+                </div>
+              );
+            })}
+          </nav>
         </div>
-      </SidebarFooter>
-    </Sidebar>
+
+        {/* Footer */}
+        <div className="p-4 border-t border-slate-700/50">
+          <div className="space-y-2">
+            {/* Settings */}
+            <NavLink
+              to="/profile"
+              className={cn(
+                "relative flex items-center rounded-xl transition-all duration-300 p-3 text-slate-300 hover:bg-slate-800/50 hover:text-white border border-transparent hover:border-slate-600/50",
+                isCollapsed ? "justify-center" : ""
+              )}
+            >
+              <Settings className="h-5 w-5" />
+              {!isCollapsed && <span className="ml-3 font-medium">Configurações</span>}
+            </NavLink>
+            
+            {/* Logout */}
+            <Button
+              onClick={handleSignOut}
+              variant="ghost"
+              className={cn(
+                "w-full flex items-center rounded-xl transition-all duration-300 p-3 text-slate-300 hover:bg-red-500/10 hover:text-red-400 border border-transparent hover:border-red-500/30",
+                isCollapsed ? "justify-center px-3" : "justify-start"
+              )}
+            >
+              <LogOut className="h-5 w-5" />
+              {!isCollapsed && <span className="ml-3 font-medium">Sair</span>}
+            </Button>
+          </div>
+
+          {/* Version info */}
+          {!isCollapsed && (
+            <div className="mt-4 pt-4 border-t border-slate-700/30">
+              <div className="text-center">
+                <p className="text-xs text-slate-500">v2.0.0</p>
+                <p className="text-xs text-slate-600 mt-1">© 2024 PoupaIgão</p>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
   );
 };
 
