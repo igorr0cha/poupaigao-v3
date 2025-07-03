@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -87,22 +86,64 @@ export const useSimplifiedFinancialData = () => {
     quantity: number;
     average_price: number;
   }) => {
-    if (!user) throw new Error('User not authenticated');
+    if (!user) return { error: new Error('User not authenticated') };
 
-    const { error } = await supabase
-      .from('investments')
-      .insert({
-        asset_name: investmentData.asset_name,
-        asset_type_id: investmentData.asset_type_id,
-        quantity: investmentData.quantity,
-        average_price: investmentData.average_price,
-        user_id: user.id
-      });
+    try {
+      const { error } = await supabase
+        .from('investments')
+        .insert({
+          asset_name: investmentData.asset_name,
+          asset_type_id: investmentData.asset_type_id,
+          quantity: investmentData.quantity,
+          average_price: investmentData.average_price,
+          user_id: user.id
+        });
 
-    if (error) throw error;
-    
-    await fetchData();
-    return { error: null };
+      if (error) return { error };
+      
+      await fetchData();
+      return { error: null };
+    } catch (error) {
+      return { error };
+    }
+  };
+
+  const updateInvestment = async (id: string, updates: any) => {
+    if (!user) return { error: new Error('User not authenticated') };
+
+    try {
+      const { error } = await supabase
+        .from('investments')
+        .update(updates)
+        .eq('id', id)
+        .eq('user_id', user.id);
+
+      if (error) return { error };
+      
+      await fetchData();
+      return { error: null };
+    } catch (error) {
+      return { error };
+    }
+  };
+
+  const deleteInvestment = async (id: string) => {
+    if (!user) return { error: new Error('User not authenticated') };
+
+    try {
+      const { error } = await supabase
+        .from('investments')
+        .delete()
+        .eq('id', id)
+        .eq('user_id', user.id);
+
+      if (error) return { error };
+      
+      await fetchData();
+      return { error: null };
+    } catch (error) {
+      return { error };
+    }
   };
 
   const getMonthlyIncome = (month?: number, year?: number) => {
@@ -242,102 +283,130 @@ export const useSimplifiedFinancialData = () => {
   const addMoneyToGoal = async (goalId: string, amount: number) => {
     if (!user) return { error: new Error('User not authenticated') };
 
-    const goal = goals.find(g => g.id === goalId);
-    if (!goal) return { error: new Error('Goal not found') };
+    try {
+      const goal = goals.find(g => g.id === goalId);
+      if (!goal) return { error: new Error('Goal not found') };
 
-    const newAmount = Number(goal.current_amount) + amount;
+      const newAmount = Number(goal.current_amount) + amount;
 
-    const { error } = await supabase
-      .from('financial_goals')
-      .update({ current_amount: newAmount })
-      .eq('id', goalId)
-      .eq('user_id', user.id);
+      const { error } = await supabase
+        .from('financial_goals')
+        .update({ current_amount: newAmount })
+        .eq('id', goalId)
+        .eq('user_id', user.id);
 
-    if (error) return { error };
-    
-    await fetchData();
-    return { error: null };
+      if (error) return { error };
+      
+      await fetchData();
+      return { error: null };
+    } catch (error) {
+      return { error };
+    }
   };
 
   const adjustAccountBalance = async (newBalance: number) => {
-    setAccountBalance(newBalance);
-    return { error: null };
+    try {
+      setAccountBalance(newBalance);
+      return { error: null };
+    } catch (error) {
+      return { error };
+    }
   };
 
   const markTransactionAsPaid = async (transactionId: string) => {
     if (!user) return { error: new Error('User not authenticated') };
 
-    const { error } = await supabase
-      .from('transactions')
-      .update({ is_paid: true })
-      .eq('id', transactionId)
-      .eq('user_id', user.id);
+    try {
+      const { error } = await supabase
+        .from('transactions')
+        .update({ is_paid: true })
+        .eq('id', transactionId)
+        .eq('user_id', user.id);
 
-    if (error) return { error };
-    
-    await fetchData();
-    return { error: null };
+      if (error) return { error };
+      
+      await fetchData();
+      return { error: null };
+    } catch (error) {
+      return { error };
+    }
   };
 
   const addTransaction = async (transactionData: any) => {
     if (!user) return { error: new Error('User not authenticated') };
 
-    const { error } = await supabase
-      .from('transactions')
-      .insert({
-        ...transactionData,
-        user_id: user.id
-      });
+    try {
+      const { error } = await supabase
+        .from('transactions')
+        .insert({
+          ...transactionData,
+          user_id: user.id
+        });
 
-    if (error) return { error };
-    
-    await fetchData();
-    return { error: null };
+      if (error) return { error };
+      
+      await fetchData();
+      return { error: null };
+    } catch (error) {
+      return { error };
+    }
   };
 
   const updateTransaction = async (id: string, updates: any) => {
     if (!user) return { error: new Error('User not authenticated') };
 
-    const { error } = await supabase
-      .from('transactions')
-      .update(updates)
-      .eq('id', id)
-      .eq('user_id', user.id);
+    try {
+      const { error } = await supabase
+        .from('transactions')
+        .update(updates)
+        .eq('id', id)
+        .eq('user_id', user.id);
 
-    if (error) return { error };
-    
-    await fetchData();
-    return { error: null };
+      if (error) return { error };
+      
+      await fetchData();
+      return { error: null };
+    } catch (error) {
+      return { error };
+    }
   };
 
   const deleteTransaction = async (id: string) => {
     if (!user) return { error: new Error('User not authenticated') };
 
-    const { error } = await supabase
-      .from('transactions')
-      .delete()
-      .eq('id', id)
-      .eq('user_id', user.id);
+    try {
+      const { error } = await supabase
+        .from('transactions')
+        .delete()
+        .eq('id', id)
+        .eq('user_id', user.id);
 
-    if (error) return { error };
-    
-    await fetchData();
-    return { error: null };
+      if (error) return { error };
+      
+      await fetchData();
+      return { error: null };
+    } catch (error) {
+      return { error };
+    }
   };
 
   const updateGoal = async (id: string, updates: any) => {
     if (!user) return { error: new Error('User not authenticated') };
 
-    const { error } = await supabase
-      .from('financial_goals')
-      .update(updates)
-      .eq('id', id)
-      .eq('user_id', user.id);
+    try {
+      const { error } = await supabase
+        .from('financial_goals')
+        .update(updates)
+        .eq('id', id)
+        .eq('user_id', user.id);
 
-    if (error) return { error };
-    
-    await fetchData();
-    return { error: null };
+      if (error) return { error };
+      
+      await fetchData();
+      return { error: null };
+    } catch (error) {
+      return { error };
+    }
   };
 
   const refetch = fetchData;
@@ -362,6 +431,8 @@ export const useSimplifiedFinancialData = () => {
     deleteTransaction,
     updateGoal,
     addInvestment,
+    updateInvestment,
+    deleteInvestment,
     transactions,
     categories,
     goals,
