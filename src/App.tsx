@@ -4,7 +4,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { Toaster } from '@/components/ui/toaster';
 import ProtectedRoute from '@/components/ProtectedRoute';
-import Login from '@/pages/Login';
+import Auth from '@/pages/Auth';
 import SimplifiedIndex from '@/pages/SimplifiedIndex';
 import Revenues from '@/pages/Revenues';
 import Expenses from '@/pages/Expenses';
@@ -29,7 +29,7 @@ function App() {
       <Router>
         <div className="min-h-screen bg-gradient-to-br from-slate-950 via-green-950 to-slate-900">
           <Routes>
-            <Route path="/login" element={<Login />} />
+            <Route path="/login" element={<Auth />} />
             <Route path="/*" element={
               <ProtectedRoute>
                 <div className="flex min-h-screen">
