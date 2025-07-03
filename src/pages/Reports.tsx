@@ -7,8 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { TrendingUp, TrendingDown, DollarSign, PieChart, Calendar, BarChart3 } from 'lucide-react';
 import { FinancialBarChart } from '@/components/FinancialBarChart';
 import { ExpenseChart } from '@/components/ExpenseChart';
-import { RevenueChart } from '@/components/RevenueChart';
-import { ExpensesChart } from '@/components/ExpensesChart';
+import RevenueChart from '@/components/RevenueChart';
+import ExpensesChart from '@/components/ExpensesChart';
 import AnimatedCounter from '@/components/AnimatedCounter';
 
 const Reports = () => {
