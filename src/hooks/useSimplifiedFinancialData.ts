@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -203,7 +204,8 @@ export const useSimplifiedFinancialData = () => {
   // Saldo projetado = Saldo atual - Despesas pendentes do mês atual
   const getProjectedBalance = () => {
     const unpaidExpensesThisMonth = getUnpaidExpenses(); // A sua função getUnpaidExpenses já filtra pelo mês atual
-    return
+    return getCurrentBalance() - unpaidExpensesThisMonth;
+  };
 
   const getExpensesByCategory = (month?: number, year?: number) => {
     const targetMonth = month ?? new Date().getMonth();
@@ -462,4 +464,3 @@ export const useSimplifiedFinancialData = () => {
     refetch: fetchAllData
   };
 };
-}
