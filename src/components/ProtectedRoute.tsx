@@ -24,7 +24,7 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
     return <Navigate to="/auth" replace />;
   }
 
-  return <>{children}</>;
+  return <div className="min-h-screen w-full">{children}</div>;
 };
 
 export default ProtectedRoute;
