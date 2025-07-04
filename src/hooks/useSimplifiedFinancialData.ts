@@ -25,7 +25,8 @@ export const useSimplifiedFinancialData = () => {
         categoriesRes,
         goalsRes,
         investmentsRes,
-        investmentTypesRes
+        investmentTypesRes,
+        profileRes
       ] = await Promise.all([
         supabase
           .from('transactions')
@@ -49,7 +50,12 @@ export const useSimplifiedFinancialData = () => {
           .eq('user_id', user.id),
         supabase
           .from('investment_types')
-          .select('*')
+          .select('*'),
+        supabase
+          .from('profiles')
+          .select('account_balance')
+          .eq('id', user.id)
+          .single()
       ]);
 
       if (transactionsRes.error) throw transactionsRes.error;
@@ -63,6 +69,23 @@ export const useSimplifiedFinancialData = () => {
       setGoals(goalsRes.data || []);
       setInvestments(investmentsRes.data || []);
       setInvestmentTypes(investmentTypesRes.data || []);
+
+      // Set account balance from profiles table, default to 0 if not found
+      if (profileRes.data) {
+        setAccountBalance(Number(profileRes.data.account_balance) || 0);
+      } else {
+        // Create profile if it doesn't exist
+        const { error: insertError } = await supabase
+          .from('profiles')
+          .insert({
+            id: user.id,
+            account_balance: 0
+          });
+        
+        if (!insertError) {
+          setAccountBalance(0);
+        }
+      }
 
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -312,8 +335,17 @@ export const useSimplifiedFinancialData = () => {
   };
 
   const adjustAccountBalance = async (newBalance: number) => {
+    if (!user) return { error: new Error('User not authenticated') };
+
     try {
-      setAccountBalance(newBalance);
+      const { error } = await supabase
+        .from('profiles')
+        .update({ account_balance: newBalance })
+        .eq('id', user.id);
+
+      if (error) return { error };
+      
+      await fetchData();
       return { error: null };
     } catch (error) {
       return { error };
