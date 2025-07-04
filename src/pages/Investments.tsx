@@ -40,7 +40,7 @@ const Investments = () => {
           asset_type_id: newInvestment.asset_type_id,
           quantity: parseFloat(newInvestment.quantity),
           average_price: parseFloat(newInvestment.average_price),
-          total_invested: totalInvested,
+          // total_invested: totalInvested,
           user_id: user?.id
         });
 
