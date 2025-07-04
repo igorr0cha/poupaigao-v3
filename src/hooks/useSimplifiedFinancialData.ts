@@ -89,6 +89,9 @@ export const useSimplifiedFinancialData = () => {
     if (!user) return { error: new Error('User not authenticated') };
 
     try {
+      // Calculate total_invested automatically
+      const total_invested = investmentData.quantity * investmentData.average_price;
+      
       const { error } = await supabase
         .from('investments')
         .insert({
@@ -96,6 +99,7 @@ export const useSimplifiedFinancialData = () => {
           asset_type_id: investmentData.asset_type_id,
           quantity: investmentData.quantity,
           average_price: investmentData.average_price,
+          total_invested: total_invested,
           user_id: user.id
         });
 
@@ -112,6 +116,16 @@ export const useSimplifiedFinancialData = () => {
     if (!user) return { error: new Error('User not authenticated') };
 
     try {
+      // If quantity or average_price is being updated, recalculate total_invested
+      if (updates.quantity !== undefined || updates.average_price !== undefined) {
+        const investment = investments.find(inv => inv.id === id);
+        if (investment) {
+          const newQuantity = updates.quantity !== undefined ? updates.quantity : investment.quantity;
+          const newPrice = updates.average_price !== undefined ? updates.average_price : investment.average_price;
+          updates.total_invested = newQuantity * newPrice;
+        }
+      }
+
       const { error } = await supabase
         .from('investments')
         .update(updates)
@@ -168,6 +182,7 @@ export const useSimplifiedFinancialData = () => {
     return transactions
       .filter(t => 
         t.type === 'expense' && 
+        t.is_paid === true && // Apenas despesas pagas
         t.competence_month === targetMonth + 1 && 
         t.competence_year === targetYear
       )
@@ -190,7 +205,7 @@ export const useSimplifiedFinancialData = () => {
   };
 
   const getTotalInvestments = () => {
-    return investments.reduce((sum, inv) => sum + (Number(inv.quantity) * Number(inv.average_price)), 0);
+    return investments.reduce((sum, inv) => sum + (Number(inv.total_invested) || Number(inv.quantity) * Number(inv.average_price)), 0);
   };
 
   const getTotalGoals = () => {
@@ -204,17 +219,9 @@ export const useSimplifiedFinancialData = () => {
   const getCurrentBalance = () => {
     const currentMonth = new Date().getMonth();
     const currentYear = new Date().getFullYear();
-    const monthlyIncome = getMonthlyIncome(currentMonth, currentYear);
-    const paidExpenses = transactions
-      .filter(t => 
-        t.type === 'expense' && 
-        t.is_paid && 
-        t.competence_month === currentMonth + 1 && 
-        t.competence_year === currentYear
-      )
-      .reduce((sum, t) => sum + Number(t.amount), 0);
+    const paidExpenses = getMonthlyExpenses(currentMonth, currentYear);
     
-    return accountBalance + monthlyIncome - paidExpenses;
+    return accountBalance - paidExpenses;
   };
 
   const getProjectedBalance = () => {
@@ -226,8 +233,7 @@ export const useSimplifiedFinancialData = () => {
   const getNetWorth = () => {
     const totalInvestments = getTotalInvestments();
     const totalGoals = getTotalGoals();
-    const currentBalance = getCurrentBalance();
-    return totalInvestments + totalGoals + currentBalance;
+    return accountBalance + totalGoals + totalInvestments;
   };
 
   const getMonthlyData = () => {
@@ -261,6 +267,7 @@ export const useSimplifiedFinancialData = () => {
     transactions
       .filter(t => 
         t.type === 'expense' && 
+        t.is_paid === true && // Apenas despesas pagas
         t.competence_month === targetMonth + 1 && 
         t.competence_year === targetYear
       )
