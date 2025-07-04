@@ -17,10 +17,12 @@ import Profile from '@/pages/Profile';
 import AppSidebar from '@/components/AppSidebar';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 function AppContent() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const { user } = useAuth();
+  const isMobile = useIsMobile();
 
   const toggleSidebar = () => {
     setSidebarCollapsed(!sidebarCollapsed);
@@ -44,7 +46,7 @@ function AppContent() {
                 <AppSidebar isCollapsed={sidebarCollapsed} onToggle={toggleSidebar} />
                 <main className={cn(
                   "flex-1 transition-all duration-300 ease-in-out",
-                  sidebarCollapsed ? "ml-20" : "ml-80"
+                  isMobile ? "ml-0" : sidebarCollapsed ? "ml-20" : "ml-80"
                 )}>
                   <Routes>
                     <Route path="/" element={<SimplifiedIndex />} />
