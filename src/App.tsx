@@ -45,20 +45,26 @@ function AppContent() {
               <div className="flex min-h-screen">
                 <AppSidebar isCollapsed={sidebarCollapsed} onToggle={toggleSidebar} />
                 <main className={cn(
-                  "flex-1 transition-all duration-300 ease-in-out",
-                  isMobile ? "ml-0" : sidebarCollapsed ? "ml-20" : "ml-80"
+                  "flex-1 transition-all duration-300 ease-in-out min-h-screen",
+                  isMobile 
+                    ? "ml-0 w-full" 
+                    : sidebarCollapsed 
+                      ? "ml-0 w-full" 
+                      : "ml-80 w-[calc(100%-320px)]"
                 )}>
-                  <Routes>
-                    <Route path="/" element={<SimplifiedIndex />} />
-                    <Route path="/revenues" element={<Revenues />} />
-                    <Route path="/expenses" element={<Expenses />} />
-                    <Route path="/transactions" element={<SimplifiedTransactions />} />
-                    <Route path="/investments" element={<Investments />} />
-                    <Route path="/goals" element={<Goals />} />
-                    <Route path="/monthly-history" element={<MonthlyHistory />} />
-                    <Route path="/reports" element={<Reports />} />
-                    <Route path="/profile" element={<Profile />} />
-                  </Routes>
+                  <div className="w-full h-full p-4 sm:p-6 lg:p-8">
+                    <Routes>
+                      <Route path="/" element={<SimplifiedIndex />} />
+                      <Route path="/revenues" element={<Revenues />} />
+                      <Route path="/expenses" element={<Expenses />} />
+                      <Route path="/transactions" element={<SimplifiedTransactions />} />
+                      <Route path="/investments" element={<Investments />} />
+                      <Route path="/goals" element={<Goals />} />
+                      <Route path="/monthly-history" element={<MonthlyHistory />} />
+                      <Route path="/reports" element={<Reports />} />
+                      <Route path="/profile" element={<Profile />} />
+                    </Routes>
+                  </div>
                 </main>
               </div>
             </ProtectedRoute>
